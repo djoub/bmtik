@@ -1,5 +1,6 @@
-import time
 import hashlib
+import json
+import time
 
 class ttsign_mobile:
     def __init__(self, params: str, data: str, cookies: str) -> None:
@@ -22,49 +23,59 @@ class ttsign_mobile:
         )
         return base_str
 
-    def get_value(self) -> dict:
+    def get_value(self) -> json:
         return self.encrypt(self.get_base_string())
 
-    def encrypt(self, data: str) -> dict:
+    def encrypt(self, data: str) -> json:
         unix = time.time()
-        length = 0x14
+        len = 0x14
         key = [
-            0xDF, 0x77, 0xB9, 0x40, 0xB9, 0x9B, 0x84, 0x83,
-            0xD1, 0xB9, 0xCB, 0xD1, 0xF7, 0xC2, 0xB9, 0x85,
-            0xC3, 0xD0, 0xFB, 0xC3,
+            0xDF,
+            0x77,
+            0xB9,
+            0x40,
+            0xB9,
+            0x9B,
+            0x84,
+            0x83,
+            0xD1,
+            0xB9,
+            0xCB,
+            0xD1,
+            0xF7,
+            0xC2,
+            0xB9,
+            0x85,
+            0xC3,
+            0xD0,
+            0xFB,
+            0xC3,
         ]
-        
         param_list = []
         for i in range(0, 12, 4):
             temp = data[8 * i : 8 * (i + 1)]
             for j in range(4):
                 H = int(temp[j * 2 : (j + 1) * 2], 16)
                 param_list.append(H)
-        
         param_list.extend([0x0, 0x6, 0xB, 0x1C])
-        
-        H = int(unix)
+        H = int(hex(int(unix)), 16)
         param_list.append((H & 0xFF000000) >> 24)
         param_list.append((H & 0x00FF0000) >> 16)
         param_list.append((H & 0x0000FF00) >> 8)
         param_list.append((H & 0x000000FF) >> 0)
-        
         eor_result_list = []
         for A, B in zip(param_list, key):
             eor_result_list.append(A ^ B)
-        
-        for i in range(length):
+        for i in range(len):
             C = self.reverse(eor_result_list[i])
-            D = eor_result_list[(i + 1) % length]
+            D = eor_result_list[(i + 1) % len]
             E = C ^ D
             F = self.rbit_algorithm(E)
-            H = ((F ^ 0xFFFFFFFF) ^ length) & 0xFF
+            H = ((F ^ 0xFFFFFFFF) ^ len) & 0xFF
             eor_result_list[i] = H
-        
         result = ""
         for param in eor_result_list:
             result += self.hex_string(param)
-        
         return {
             "x-ss-req-ticket": str(int(unix * 1000)),
             "x-khronos": str(int(unix)),
@@ -89,3 +100,6 @@ class ttsign_mobile:
     def reverse(self, num):
         tmp_string = self.hex_string(num)
         return int(tmp_string[1:] + tmp_string[:1], 16)
+
+# Export the class for external use
+__all__ = ['ttsign_mobile']
